@@ -1,6 +1,6 @@
 # Written by Olly Powell
 # I wrote this because my laptop can't deal with big LIDAR datasets from LINZ.
-# The user choses the tiles of interest from the index shape file, then the
+# The user chooses the tiles of interest from the index shape file, then the
 # code here finds the associated data files and copies them to a seperate dir.
   
 # Process:

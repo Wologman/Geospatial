@@ -14,6 +14,7 @@
 #8. Run code
  
 date = '2008'  # This may need changing for other datasets!
+selection_table = 'Selection_Attribute_Table.txt' # could change this if need be
 
 import shutil
 import fnmatch
@@ -34,7 +35,7 @@ selected_files = []
 selected_tiles = 0
 file_list = []
 
-df = pd.read_csv("Selection_Attribute_Table.txt")
+df = pd.read_csv(selection_table)
 print('\n4 rows of the original attribute table: \n')
 print(df.head(4), '\n')
 

@@ -3,10 +3,10 @@ from qgis.utils import iface
 import processing
 from qgis.core import *
 from PyQt5.QtGui import QColor
-root = QgsProject.instance().layerTreeRoot()
-layers = QgsProject.instance().mapLayers() #returns a dict, values = layer object
 
 def make_hillshade(raster, path):
+    root = QgsProject.instance().layerTreeRoot()
+    layers = QgsProject.instance().mapLayers() #returns a dict, values = layer object
     hs_name = 'hs_' + raster.name()
     
     for layer in layers.values():

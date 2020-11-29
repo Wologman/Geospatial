@@ -4,16 +4,15 @@ import ntpath, sys, os
 from qgis.core import QgsProject, QgsMapLayer
 from PyQt5.QtWidgets import QInputDialog, QFileDialog, QMessageBox
 
-parent = iface.mainWindow()
-layers = QgsProject.instance().mapLayers() #returns a dict, keys are a unique sequence, values are the layer object
-
 def find_dem_raster():
+    parent = iface.mainWindow()
+    layers = QgsProject.instance().mapLayers() #returns a dict, keys are a unique sequence, values are the layer object
     bOK = False
     all_rasters, raster_list, fns, lyr_types = [],[],[],[]
     for lyr in layers.values(): 
         if lyr.type() == QgsMapLayer.RasterLayer:
-            all_rasters.append(lyr.name())       # make a list of the raster layer names
-    # print('Raster layers present: {}'.format(all_rasters))
+            all_rasters.append(lyr.name())  # make a list of the raster layer names
+    #print('Raster layers present: {}'.format(all_rasters))
 
     if all_rasters: 
         # If the all_rasters is not empty, choose from the raster list

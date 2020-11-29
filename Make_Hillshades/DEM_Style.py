@@ -5,7 +5,6 @@ from qgis.core import *
 from PyQt5.QtGui import QColor
 
 def make_hillshade(raster, path):
-    root = QgsProject.instance().layerTreeRoot()
     layers = QgsProject.instance().mapLayers() #returns a dict, values = layer object
     hs_name = 'hs_' + raster.name()
     
@@ -53,6 +52,7 @@ def make_symbology(raster):
     raster.renderer().setOpacity(0.5)
 
 def reorder_lyrs(rstr_lyr,hs_lyr):
+    root = QgsProject.instance().layerTreeRoot()
     rstr_node = root.findLayer(rstr_lyr)  # Finds the node belonging to the DEM
     hs_node = root.findLayer(hs_lyr)  # Finds the node of the hillshade.
     parent_node = rstr_node.parent()

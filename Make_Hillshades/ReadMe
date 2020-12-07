@@ -1,6 +1,6 @@
-If all these are placed in the same directory as your QGS project file, then running the Hillshade_Main_Script.py  will open any DEM rasters you choose, 
+If all these are placed in the same directory as your QGS project file, then running the Main_Script.py  will open any DEM rasters you choose, 
 or lets you chose one that is already open, and turns it into a nice looking hillshade, with a transparent tinting layer over a hillshade layer, 
 bundled together into a group.
 
-Currently only working for WGS-84, but can easily be adjusted by going into DEM_Style.py and changing the 'SCALE' parameter (as it is on the QGIS gui,
-the ratio of vertical units to horizontal) to what ever you need for your projection co-ordinates.
+Currently intended for a projected co-ordinate system.  If the source data is in WGS-84, it will be re-projected into NZGD2000.  If this funtction was 
+removed, and the hillshade is made in WGS-84 then it is necessary to adjust the scale parameter (the ratio of vertical units to horizontal).

@@ -10,7 +10,6 @@ def make_hillshade(raster, path):
     
     for layer in layers.values():
         if layer.name() == hs_name:
-            print(layer)
             QgsProject.instance().removeMapLayer(layer)
             
     hs_param = {'INPUT': "", 
@@ -18,7 +17,7 @@ def make_hillshade(raster, path):
       'COMPUTE_EDGES': False,
       'ZEVENBERGEN': False,
       'Z_FACTOR': 1.0,
-      'SCALE': 111120,  # should automate this setting to match the coordinate system
+      'SCALE': 1,  #111120,  # should automate this setting to match the coordinate system
       'AZIMUTH': 315,
       'COMBINED': False,
       'ALTITUDE': 45,
@@ -69,8 +68,7 @@ def reorder_lyrs(rstr_lyr,hs_lyr):
         parent_node.insertChildNode(rstr_idx+1, cloned)
         parent_node.removeChildNode(hs_node)
         
-def make_terrain(input_rasters, prjpath):
-    for rstr_lyr in input_rasters:
-        hs_lyr = make_hillshade(rstr_lyr, prjpath)
-        make_symbology(rstr_lyr)
-        reorder_lyrs(rstr_lyr,hs_lyr)
+def make_terrain(rstr_lyr, prjpath):
+    hs_lyr = make_hillshade(rstr_lyr, prjpath)
+    make_symbology(rstr_lyr)
+    reorder_lyrs(rstr_lyr, hs_lyr)

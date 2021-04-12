@@ -1,3 +1,5 @@
+Likely to need updating for Windows.  Currently only tested on Ubuntu.
+
 If all these are placed in the same directory as your QGS project file, then running the Main_Script.py  will open any DEM rasters you choose, 
 or lets you chose one that is already open, and turns it into a nice looking hillshade, with a transparent tinting layer over a hillshade layer, 
 bundled together into a group.

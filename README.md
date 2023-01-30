@@ -1,4 +1,5 @@
 # Geospatial
-Useful bits of code for GIS
 
-There will be a mixture of PyQGIS, and pure Python in here.  I also had a wee go at python 2.7 scripting for Arcmap but decided I was flogging a dead horse doing this in 2020.
+Useful bits of code and other notes for GIS with open source data and frameworks.
+
+There will be a mixture of PyQGIS, GeoPandas and pure Python in here.

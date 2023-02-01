@@ -1,13 +1,52 @@
-The GeoPandas library works with GeoDataFrames.  These behave much like regular Panadas DataFrames, and have similar methods, except that they are able to contain spatial data, with structures inherited from the Shapely package, and include spatial attributes such as the CRS.
+The GeoPandas library works with GeoDataFrames.  These behave much like regular Panadas DataFrames, and have similar methods, except that they are able to contain spatial data, with structures inherited from the Shapely package, and include spatial attributes and methods.
 
-GeoPandas can conveniently read data in from a variety of vector spatial file types, including .shp and GeoJSON.  Using `geo_df = read_file(filepath)` We can perform spatial joins and spatial methods on the GeoSeries objects such as `area()` & `centroid()` for example, as well as using most of the usual familiar methods from Pandas, like `sortvalues()`.
+GeoPandas can conveniently read data in from a variety of vector spatial file types, including .shp and GeoJSON.  We can perform spatial joins and other spatial methods on the GeoSeries objects such as `area()` & `centroid()` for example, as well as using most of the usual familiar methods from Pandas, like `sortvalues()`, `groupby()` etc.
+
+For raster data, import using the rasterio library, and add to the same plots.  
+
+For vector basemaps, or to output an interactive html product, work with folium.  This is a Python API for the Leafet JavaScript library, and uses OpenStreetMaps as the source maps. 
 
 ## GeoDataFrames
 For anything more complex than points, we should use GeoPandas, and create a GeoDataFrame.  Either by directly reading a vector file with `geo_df = read_file(filepath)`, or by creating one from scratch.
 
-Each GeoDataFrame will have a `geometry` field, that will contain a geometry type inhereted from Shapely.  Points, LineStrig, MultiLineString, Polygon, MultiPolygon.
+Each GeoDataFrame will have a `geometry` field, that will contain a geometry type inherited from Shapely.  Points, LineString, MultiLineString, Polygon, MultiPolygon.
 
-We could build a GeoDataFrame from scratch, by assigning a CRS, and creating the Shapely geometry objects for each row.
+We could build a GeoDataFrame from scratch, by assigning a CRS (Using an EPSG number), and creating the Shapely geometry objects for each row, asigning those to the `geometry` field.
+
+From a Pandas DataFrame with lat and long fields to a GeoPandas GeoDataFrame:
+
+Starting with this dataframe `schools`:
+
+|School Name | Latitude  |   Longitude |
+|----------|:-------------:|------:|
+|A. Z. Kelley Elementary | 36.021 | -86.658 |
+|Alex Green Elementary |36.252 |-86.832 |
+|Amqui Elementary |36.273|-86.703 |
+
+First turn the spatial data into Shapely points using a lamda function, then create a GeoDataFrame.
+```python
+from shapely.geometry import Point
+schools['geometry'] = schools.apply(lambda x: Point((x.Longitude, x.Latitude)),
+axis = 1)
+```
+Now turn it into a GeoDataframe with the `GeoDataFrame()` method.
+```python
+import geopandas as gpd
+
+schools_crs = {'init': 'epsg:4326'}
+schools_geo = gpd.GeoDataFrame(schools, GeoDataFrame(schools,
+													crs = schools_crs,
+													geometry = schools.geometry))
+```
+
+### Change the CRS
+
+A common situation is that we may want to work in km or metres, but the data has started in EPSG4326 from a WGS84 projection and uses desimal degrees.  So this will need to be converted to EPSG3587 to work in meters.   Or for New Zealand work consider EPSG4167 to use NZGD2000.
+
+To plot in EPSG4167 using latitude and longitude, but make spatial calculations in metres with EPSG3587, the dataframe can be converted, calculations made, results added to the dataframe, then the dataframe CRS converted back.  Or the calculations can be made in a second dataframe, then the results added back (to avoid any small conversion losses)
+```python
+my_new_geodataframe = old_dataframe.to_crs(epsg=3587)   
+```
 
 ## Plotting 
 
@@ -19,9 +58,9 @@ If the source CSV or DataFrame doesn't alread have a column for lat and long, th
 bus_stops['lat'] = [loc[0] for loc in bus_stops.Location]
 bus_stops['lng'] = [loc[1] for loc in bus_stops.Location]
 ```
-If the lat and longitude is tied up in a more complex structure cosider using a regular expression.
+If the lat and longitude is burried in a more complex text string consider using a regular expression to retrieve them.
 
-To plot, with nice circles, one color for the face, one for the edge:
+To plot with matplotlib, with nice circles, a grid, one color for the face, one for the edge:
 ```python
 plt.scatter(schools.Longitude, schools.Latitude,
 markerfacecolor='darkgreen', markeredgecolor='black', marker='p')
@@ -53,10 +92,5 @@ gpd.sjoin(blue_region_gdf, black_point_gdf, op = <operation>)
 The three operations are `within`, `contains`, `intersects`
 
 ## GeoSeries Methods
-
-### Change the CRS
-```python
-my_new_geodataframe = old_dataframe.to_crs(epsg=3587)   
-```
 
 Distance, area, centroid etc

@@ -89,7 +89,6 @@ The `column` attribute tells the method what column to base the color scheem on.
 gpd.sjoin(blue_region_gdf, black_point_gdf, op = <operation>)
 ```
 The three operations are `within`, `contains`, `intersects`, `disjoint` Intersects and disjoint are obvious enough, is obvious, but within and contains are a bit subtle.
-
 ```python
 contains_gdf = gpd.sjoin(blue_region_gdf, black_point_gdf, op = 'contains')
 ```
@@ -101,6 +100,57 @@ This means find all the black points that are within the blue regions.  Notice t
 
 The resulting dataframe will have fields suffixed `_left` and `_right` including the index of the right dataframe.
 
-## GeoSeries Methods
+## GeoSeries Methods & Attributes
 
-Distance, area, centroid etc
+Since the GeoDataFrame is made up of GeoSeries objects, we can access all the useful spatial methods like distance, area, centroid etc.   Refer to the docs for the [full list](https://geopandas.org/en/stable/docs/reference/geoseries.html)
+
+Here is an example to get the centroids from a df 'school districts', with polygon geometries in the geometry field.
+```python
+school_districts['center'] = school_districts.geometry.centroid
+```
+Some useful methods:
+- `.distance(anonther_shapely_object)` between the object and some other thing
+-  `.fillna([value, method, inplace])`   Fills the NZ with a geometry
+- `.clip(mask[, keep_geom_type])`  
+- `.rotate(angle[, origin, use_radians)`
+- `.buffer(distance[, resolution])`
+- `.intersects(other[, align])` Returns a boolean
+
+Useful attributes
+- `.crs` Returns the CRS
+- `.length` Length of the series geometry, in units of the CRS
+- `.area`
+- `.centroid`
+
+## Folium
+
+A python API, that builds interactive maps by accessing the Leaflet JavaScript library
+```python
+import folium
+# construct a map centered at the Eiffel Tower
+eiffel_tower = folium.Map([location = 48.8583736,2.2922926], zoom_start = 12)
+# display the map
+display(eiffel_tower)
+```
+
+That's it, super easy to display in ipython.  
+
+### Adding overlays
+
+### Markers and popups
+
+### Choropleths
+
+So now we can harness the awesome power of GeoPandas, and overlay the resulting spatial information on an interactive web map.  And put calcualted values into point pop-ups if need be.
+
+### Exporting Folium maps to the Web
+
+Getting from a Jupyter notebook or Ipython console to html and javascript takes an extra step.  Still looking into this.    
+
+Try this to get started:
+https://pythonhow.com/python-tutorial/folium/Web-Mapping-Tutorial-with-Python-and-Folium/
+
+Then make something cool and ad it to my own portfolio page!
+
+
+

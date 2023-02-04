@@ -40,7 +40,6 @@ schools_geo = gpd.GeoDataFrame(schools, GeoDataFrame(schools,
 ```
 
 ### Change the CRS
-
 A common situation is that we may want to work in km or metres, but the data has started in EPSG4326 from a WGS84 projection and uses desimal degrees.  So this will need to be converted to EPSG3587 to work in meters.   Or for New Zealand work consider EPSG4167 to use NZGD2000.
 
 To plot in EPSG4167 using latitude and longitude, but make spatial calculations in metres with EPSG3587, the dataframe can be converted, calculations made, results added to the dataframe, then the dataframe CRS converted back.  Or the calculations can be made in a second dataframe, then the results added back (to avoid any small conversion losses)
@@ -89,7 +88,18 @@ The `column` attribute tells the method what column to base the color scheem on.
 ```python
 gpd.sjoin(blue_region_gdf, black_point_gdf, op = <operation>)
 ```
-The three operations are `within`, `contains`, `intersects`
+The three operations are `within`, `contains`, `intersects`, `disjoint` Intersects and disjoint are obvious enough, is obvious, but within and contains are a bit subtle.
+
+```python
+contains_gdf = gpd.sjoin(blue_region_gdf, black_point_gdf, op = 'contains')
+```
+This means find all the blue regions that contains all the black points.
+```python
+within_gdf = gpd.sjoin(black_point_gdf, blue_region_gdf, op = 'within')
+```
+This means find all the black points that are within the blue regions.  Notice the order is switched.  We're still talking about the same points and regions.
+
+The resulting dataframe will have fields suffixed `_left` and `_right` including the index of the right dataframe.
 
 ## GeoSeries Methods
 

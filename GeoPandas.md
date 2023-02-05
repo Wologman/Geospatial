@@ -127,21 +127,87 @@ Useful attributes
 A python API, that builds interactive maps by accessing the Leaflet JavaScript library
 ```python
 import folium
+from shapely.geometry import Point
 # construct a map centered at the Eiffel Tower
-eiffel_tower = folium.Map([location = 48.8583736,2.2922926], zoom_start = 12)
+eiffel_location = Point((48.8583736,2.2922926))
+eiffel_tower_map = folium.Map(location=eiffel_location, zoom_start = 12)
 # display the map
-display(eiffel_tower)
+display(eiffel_tower_map)
 ```
 
 That's it, super easy to display in ipython.  
 
 ### Adding overlays
 
+Continuing from above
+```python
+folium.GeoJson(some_parisian_overlay.geometry).add_to(eifel_tower_map)
+display(eiffel_tower_map)
+```
+
 ### Markers and popups
+
+Add markers iteratively with the `.add_to()` method
+```python
+for row in schools_in_dist1.iterrows():
+	row_values = row[1]
+	location = [row_values['lat'], row_values['lng']]
+	marker = folium.Marker(location = location)
+	marker.add_to(district1_map)
+	display(district1_map)
+```
+
+To make popups, create a string_variable, representing the html and add that to the marker.
+```python
+for row in schools_in_dist1.iterrows():
+	row_values = row[1]
+	location = [row_values['lat'], row_values['lng']]
+	popup = '<strong>' + row_values['name'] + '</strong>'
+	marker = folium.Marker(location = location, popup=popup)
+	marker.add_to(district1_map)
+	display(district1_map)
+```
+So now we can harness the awesome power of GeoPandas, and overlay the resulting spatial information on an interactive web map.  And put calcualted values into point pop-ups if need be.
 
 ### Choropleths
 
-So now we can harness the awesome power of GeoPandas, and overlay the resulting spatial information on an interactive web map.  And put calcualted values into point pop-ups if need be.
+A chloropleth is a map showing density or some other numerical value as a color gradient.  
+
+[Find the colormaps here from matplotlib](https://matplotlib.org/stable/tutorials/colors/colormaps.html)
+
+Supposed we already calculated area/density/normalised/means/ counts of something etc for every polygon in a GeoDataFrame.  And we would like to make a Blue-Green chloropleth.
+
+```python
+districts_with_counts.plot(column = 'school_density', cmap = 'BuGn', edgecolor = 'black', legend =
+plt.title('Schools per decimal degrees squared area')
+plt.xlabel('longitude')
+plt.ylabel('latitude')
+plt.show()
+```
+
+Folium maps have a `chloropleth()` method that can asign a color gradient to numerical values for each polygon.  Here is an example much like above.
+```python
+# Center point and map for Nashville
+nashville = [36.1636,-86.7823]
+m = folium.Map(location=nashville, zoom_start=10)
+
+# Define a choropleth layer for the map
+m.choropleth(
+geo_data=districts_with_counts,
+name='geometry',
+data=districts_with_counts,
+columns=['district', 'school_density'],
+key_on='feature.properties.district',
+fill_color='YlGn',
+fill_opacity=0.75,
+line_opacity=0.5,
+legend_name='Schools per km squared by School District'
+)
+
+# Add layer control and display
+folium.LayerControl().add_to(m)
+display(m)
+```
 
 ### Exporting Folium maps to the Web
 

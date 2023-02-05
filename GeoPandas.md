@@ -1,8 +1,8 @@
-The GeoPandas library works with GeoDataFrames.  These behave much like regular Panadas DataFrames, and have similar methods, except that they are able to contain spatial data, with structures inherited from the Shapely package, and include spatial attributes and methods.
+The GeoPandas library works with GeoDataFrames.  These behave much like regular Panadas DataFrames, and have similar methods, except that they are able to contain spatial data, with spatial types inherited from the Shapely package, and include spatial attributes and methods.
 
 GeoPandas can conveniently read data in from a variety of vector spatial file types, including .shp and GeoJSON.  We can perform spatial joins and other spatial methods on the GeoSeries objects such as `area()` & `centroid()` for example, as well as using most of the usual familiar methods from Pandas, like `sortvalues()`, `groupby()` etc.
 
-For raster data, import using the rasterio library, and add to the same plots.  
+For raster data, import using the Rasterio library, and add to the same plots.  
 
 For vector basemaps, or to output an interactive html product, work with folium.  This is a Python API for the Leafet JavaScript library, and uses OpenStreetMaps as the source maps. 
 
@@ -13,7 +13,7 @@ Each GeoDataFrame will have a `geometry` field, that will contain a geometry typ
 
 We could build a GeoDataFrame from scratch, by assigning a CRS (Using an EPSG number), and creating the Shapely geometry objects for each row, asigning those to the `geometry` field.
 
-From a Pandas DataFrame with lat and long fields to a GeoPandas GeoDataFrame:
+From a Pandas DataFrame with latitude and longitude fields to a GeoPandas GeoDataFrame:
 
 Starting with this dataframe `schools`:
 
@@ -38,15 +38,13 @@ schools_geo = gpd.GeoDataFrame(schools, GeoDataFrame(schools,
 													crs = schools_crs,
 													geometry = schools.geometry))
 ```
-
 ### Change the CRS
-A common situation is that we may want to work in km or metres, but the data has started in EPSG4326 from a WGS84 projection and uses desimal degrees.  So this will need to be converted to EPSG3587 to work in meters.   Or for New Zealand work consider EPSG4167 to use NZGD2000.
+A common situation is that we may want to work in km or metres, but the data has started in EPSG4326 from a WGS84 projection and uses decimal degrees.  So this will need to be converted to EPSG3587 to work in meters.   Or for New Zealand work consider EPSG4167 to use NZGD2000.
 
-To plot in EPSG4167 using latitude and longitude, but make spatial calculations in metres with EPSG3587, the dataframe can be converted, calculations made, results added to the dataframe, then the dataframe CRS converted back.  Or the calculations can be made in a second dataframe, then the results added back (to avoid any small conversion losses)
+To plot in EPSG4167 using latitude and longitude, but make spatial calculations in metres with EPSG3587, the dataframe can be converted, calculations made, results added to the dataframe, then the dataframe CRS converted back.  Or the calculations can be made in a second subset dataframe, then the results added back (to avoid any small conversion losses, and possibly reduce the processing time)
 ```python
 my_new_geodataframe = old_dataframe.to_crs(epsg=3587)   
 ```
-
 ## Plotting 
 
 ### Scatter plot for point objects
@@ -88,11 +86,11 @@ The `column` attribute tells the method what column to base the color scheem on.
 ```python
 gpd.sjoin(blue_region_gdf, black_point_gdf, op = <operation>)
 ```
-The three operations are `within`, `contains`, `intersects`, `disjoint` Intersects and disjoint are obvious enough, is obvious, but within and contains are a bit subtle.
+The three operations are `within`, `contains`, `intersects`, `disjoint` Intersects and disjoint are obvious enough, but `within` and `contains` are a bit subtle.
 ```python
 contains_gdf = gpd.sjoin(blue_region_gdf, black_point_gdf, op = 'contains')
 ```
-This means find all the blue regions that contains all the black points.
+This means find all the blue regions that contain all the black points.
 ```python
 within_gdf = gpd.sjoin(black_point_gdf, blue_region_gdf, op = 'within')
 ```
@@ -108,6 +106,7 @@ Here is an example to get the centroids from a df 'school districts', with polyg
 ```python
 school_districts['center'] = school_districts.geometry.centroid
 ```
+
 Some useful methods:
 - `.distance(anonther_shapely_object)` between the object and some other thing
 -  `.fillna([value, method, inplace])`   Fills the NZ with a geometry
@@ -131,7 +130,6 @@ from shapely.geometry import Point
 # construct a map centered at the Eiffel Tower
 eiffel_location = Point((48.8583736,2.2922926))
 eiffel_tower_map = folium.Map(location=eiffel_location, zoom_start = 12)
-# display the map
 display(eiffel_tower_map)
 ```
 
@@ -171,14 +169,13 @@ So now we can harness the awesome power of GeoPandas, and overlay the resulting 
 
 ### Choropleths
 
-A chloropleth is a map showing density or some other numerical value as a color gradient.  
+A chloropleth is a map showing density or some other numerical value as a color gradient applied to each region (polygon).   [Find the colormaps here from matplotlib](https://matplotlib.org/stable/tutorials/colors/colormaps.html)
 
-[Find the colormaps here from matplotlib](https://matplotlib.org/stable/tutorials/colors/colormaps.html)
-
-Supposed we already calculated area/density/normalised/means/ counts of something etc for every polygon in a GeoDataFrame.  And we would like to make a Blue-Green chloropleth.
+Supposed we already calculated area/density/normalised values/means/ counts of something etc. for every polygon in a GeoDataFrame.  And we would like to make a Blue-Green chloropleth.
 
 ```python
-districts_with_counts.plot(column = 'school_density', cmap = 'BuGn', edgecolor = 'black', legend =
+districts_with_counts.plot(column = 'school_density', 
+						   cmap = 'BuGn', edgecolor='black', legend=True)
 plt.title('Schools per decimal degrees squared area')
 plt.xlabel('longitude')
 plt.ylabel('latitude')
@@ -208,15 +205,22 @@ legend_name='Schools per km squared by School District'
 folium.LayerControl().add_to(m)
 display(m)
 ```
+By default folium uses Open Street Map, but there is a argument `tiles` that can be set to other sources the full list below:
+
+-   OpenStreetMap
+-  Mapbox Bright” (Limited levels of zoom for free tiles)
+-   Mapbox Control Room (Limited levels of zoom for free tiles)
+-   Stamen (Terrain, Toner, and Watercolor)
+-   Cloudmade (Must pass API key)
+-   “Mapbox” (Must pass API key)
+-   “CartoDB” (positron and dark_matter)
 
 ### Exporting Folium maps to the Web
 
-Getting from a Jupyter notebook or Ipython console to html and javascript takes an extra step.  Still looking into this.    
+Add a a save method at the end,  `map.save(outfile='my_awesome_map.html')`  Then put the resulting javascript, html and css onto the website.  That's it!  So easy :)
 
-Try this to get started:
-https://pythonhow.com/python-tutorial/folium/Web-Mapping-Tutorial-with-Python-and-Folium/
 
-Then make something cool and ad it to my own portfolio page!
+
 
 
 

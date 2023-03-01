@@ -9,7 +9,7 @@ For vector basemaps, or to output an interactive html product, work with folium.
 ## GeoDataFrames
 For anything more complex than points, we should use GeoPandas, and create a GeoDataFrame.  Either by directly reading a vector file with `geo_df = read_file(filepath)`, or by creating one from scratch.
 
-Each GeoDataFrame will have a `geometry` field, that will contain a geometry type inherited from Shapely.  Points, LineString, MultiLineString, Polygon, MultiPolygon.
+Each GeoDataFrame will have a `geometry` attribute, that will contain a geometry type inherited from Shapely.  Points, LineString, MultiLineString, Polygon, MultiPolygon.  Typically this will also be a field in the dataframe table named 'geometry', but actually this could be called anything, and would still be a `.geometry` attribute of the dataframe.
 
 We could build a GeoDataFrame from scratch, by assigning a CRS (Using an EPSG number), and creating the Shapely geometry objects for each row, asigning those to the `geometry` field.
 
@@ -45,6 +45,34 @@ To plot in EPSG4167 using latitude and longitude, but make spatial calculations 
 ```python
 my_new_geodataframe = old_dataframe.to_crs(epsg=3587)   
 ```
+
+### Data Exploration
+Geodataframes inheret most of the methods from regular pandas dataframes, which can be used for convenient analysis.
+
+#### Filtering
+We can filter the dataframe by creating a boolean series and using it as a mask.  For example with a dataframe of countries of the world:
+```python
+countries['continent'] == 'Africa'  #returns a boolean series.  
+# Or to use the series as a mask and return only the countries in Africa:
+countries_africa = countries[countries['continent'] == 'Africa']
+```
+
+#### `.groupby()`
+
+Groupby can be used as usual to get statistics about groups by their common attributes
+```python
+restaurants = geopandas.read_file("paris_restaurants.geosjon")
+# Calculate the number of restaurants of each type
+type_counts = restaurants.groupby('type').size()
+print(type_counts)
+
+>>>     type 
+>>> 	African     138
+>>> 	Asian       1642
+>>> 	Trad French 1945
+>>> 	etc...
+```
+
 ## Plotting 
 
 ### Scatter plot for point objects
@@ -69,8 +97,32 @@ plt.show()
 ```
 We could turn the points into shapely point objects, and create a GeoDataFrame, but this isn't necessary if all we want to do is visualise the relative locations of a few points compared to each other.
 
-### Plotting Lines & Polygons
-GeoDataFrames have a `.plot()` method that we can use for lines and polygons.
+### `gpd.plot()` and `contextily`
+
+GeoDataFrames have a `.plot()` method that we can use for points, lines and polygons, whatever is in the .geometry attribute of the dataframe.   With no arguments at all, this will produce a basic plot with polygons in bue, white gaps between, or blue lines.   
+
+For a really simple base-map, consider improting `contextily` and using the add_basemap() method.  Here is an example of Paris restaurants, starting from a `csv` file of lat and long points in EPSG4326 (decimal degrees) .
+
+```python
+import contextily
+import geopandas as gpd
+import pandas as pd
+
+df = pd.read_csv("paris_restaurants.csv")
+# Convert it to a GeoDataFrame
+restaurants = gpd.GeoDataFrame(df, geometry=geopandas.points_from_xy(df.x, df.y))
+ax = restaurants.plot(markersize=1)
+contextily.add_basemap(ax)
+plt.show()
+```
+
+### Plot with colors based on attribute values
+
+```python
+my_gpd.plot(column = 'some interesting value')
+```
+
+### Adding a scatterplot
 To add scatter plots over the same plot, we simply add the scatter plot to it, as we would with `plt.scatter()`.  Here is an example with both polygons and points:
 
 ```python
@@ -80,6 +132,17 @@ plt.title('Nashville Schools and School Districts')
 plt.show();
 ```
 The `column` attribute tells the method what column to base the color scheem on.  In this case we are coloring each district a different color, and we are using a categorical color scheme, rather than a continuously variable one.
+
+### Multi-layered plot
+The above principle can be extended to any number of extra layers elegantly with `plt.subplots` and setting the `ax` attribute of plot.  For an example of city points on a polygon map of the world:
+
+```python
+fig, ax = plt.subplots(figsize=(12,6))
+countries.plot(ax=ax)
+cities.plot(ax=ax, color='red', markersize=10)
+ax.set_axis_off()  #removes the outer border and ticks
+plt.show()
+```
 
 ## Spatial Joins
 

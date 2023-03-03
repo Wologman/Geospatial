@@ -4,7 +4,7 @@ GeoPandas can conveniently read data in from a variety of vector spatial file ty
 
 For raster data, import using the Rasterio library, and add to the same plots.  
 
-For vector basemaps, or to output an interactive html product, work with folium.  This is a Python API for the Leafet JavaScript library, and uses OpenStreetMaps as the source maps. 
+For vector basemaps, or to output an interactive html product, work with folium.  This is a Python API for the Leafet JavaScript library, and uses OpenStreetMaps by default as the source maps (with other tile providers also an option). 
 
 ## GeoDataFrames
 For anything more complex than points, we should use GeoPandas, and create a GeoDataFrame.  Either by directly reading a vector file with `geo_df = read_file(filepath)`, or by creating one from scratch.
@@ -23,7 +23,7 @@ Starting with this dataframe `schools`:
 |Alex Green Elementary |36.252 |-86.832 |
 |Amqui Elementary |36.273|-86.703 |
 
-First turn the spatial data into Shapely points using a lamda function, then create a GeoDataFrame.
+First turn the spatial data into Shapely points using a lambda function, then create a GeoDataFrame.
 ```python
 from shapely.geometry import Point
 schools['geometry'] = schools.apply(lambda x: Point((x.Longitude, x.Latitude)),
@@ -38,6 +38,14 @@ schools_geo = gpd.GeoDataFrame(schools, GeoDataFrame(schools,
 													crs = schools_crs,
 													geometry = schools.geometry))
 ```
+
+### `gdp.read_file()`
+This is the easiest way to get a geodataframe.  Will read the usual vector dataformats, including .shp, .geojson, .gpkg.   Return a geoDataFrame.
+
+```python
+trees = gpd.read_file(paris_trees.gpkg)
+```
+
 ### Change the CRS
 A common situation is that we may want to work in km or metres, but the data has started in EPSG4326 from a WGS84 projection and uses decimal degrees.  So this will need to be converted to EPSG3587 to work in meters.   Or for New Zealand work consider EPSG4167 to use NZGD2000.
 
@@ -57,11 +65,32 @@ countries['continent'] == 'Africa'  #returns a boolean series.
 countries_africa = countries[countries['continent'] == 'Africa']
 ```
 
+The same pattern can be used for spatial queries, to efficiently filter elements based on a spatial relationship.  For example 
+
+```python
+cities.within(france)  # This would return a boolean series for a dataframe of cities and a polygon object france.
+cities[cities.within(france)] # This would return  a gdb of cities within france
+```
+
+Same thing, but here we're going to make it a bit clearer using a mask object on.  Asking which countries intersect with tributaries of the Amazon.  The countries and rivers are in different dataframes.
+```python
+rivers= geopandas.read_file(my_amazon_rivers_centrelines.gpkg)
+# Contains a 'name' field, we're looking for ones called 'Amazonas' with this filter:
+amazon = rivers[rivers['name']== 'Amazonas'].geometry.squeeze() 
+mask = countries.intersects(amazon) #creating another mask
+countries[mask]
+
+>>>  name   continent   geometry
+>>>  Brazil  South America   POLYGON((.....))
+>>>  Columbia
+>>>  Peru   etc...
+```
+
 #### `.groupby()`
 
 Groupby can be used as usual to get statistics about groups by their common attributes
 ```python
-restaurants = geopandas.read_file("paris_restaurants.geosjon")
+restaurants = geopandas.read_file("paris_restaurants.geojson")
 # Calculate the number of restaurants of each type
 type_counts = restaurants.groupby('type').size()
 print(type_counts)
@@ -72,6 +101,17 @@ print(type_counts)
 >>> 	Trad French 1945
 >>> 	etc...
 ```
+
+### `pd.merge()`
+This is likely to crop up as a useful thing to do after running some kind of calculation, for example a groupby and count, back into the original dataframe.  So it's not a spatial operation, just a traditional dataframe join based on column values.
+
+Here we've already used groupby and size to get a df trees_by_district
+
+```python
+districts_trees = pd.merge(districts, trees_by_district on='district_name')
+```
+
+This will add the resulting number of trees back into a dataframe of districts. For some future calculation like density, etc.
 
 ## Plotting 
 
@@ -110,7 +150,7 @@ import pandas as pd
 
 df = pd.read_csv("paris_restaurants.csv")
 # Convert it to a GeoDataFrame
-restaurants = gpd.GeoDataFrame(df, geometry=geopandas.points_from_xy(df.x, df.y))
+restaurants = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.x, df.y))
 ax = restaurants.plot(markersize=1)
 contextily.add_basemap(ax)
 plt.show()
@@ -133,16 +173,35 @@ plt.show();
 ```
 The `column` attribute tells the method what column to base the color scheem on.  In this case we are coloring each district a different color, and we are using a categorical color scheme, rather than a continuously variable one.
 
-### Multi-layered plot
-The above principle can be extended to any number of extra layers elegantly with `plt.subplots` and setting the `ax` attribute of plot.  For an example of city points on a polygon map of the world:
+### Multi-layered plot(s)
+The above principle can be extended to any number of extra layers and multiple plots elegantly with `plt.subplots` and setting the `ax` attribute of plot.  For an example of city points on a polygon map of the world:
 
 ```python
-fig, ax = plt.subplots(figsize=(12,6))
+fig, ax = plt.subplots(figsize=(12,6), nrows=1)  
+#nrows is optional, could set nrows=2 and ax[0], ax[1] for two plots
 countries.plot(ax=ax)
 cities.plot(ax=ax, color='red', markersize=10)
 ax.set_axis_off()  #removes the outer border and ticks
 plt.show()
 ```
+
+Here is an example with two plots.
+```python
+# Set up figure and subplots
+fig, axes = plt.subplots(nrows=2)
+# Plot equal interval map
+districts_trees.plot(column='n_trees_per_area', scheme='equal_interval', k=5, legend=True, ax=axes[0])
+axes[0].set_title('Equal Interval')
+axes[0].set_axis_off()
+
+# Plot same map with quantiles scheme
+districts_trees.plot('n_trees_per_area', scheme='quantiles', k=5, legend=True, ax=axes[1])
+axes[1].set_title('Quantiles')
+axes[1].set_axis_off()
+plt.show()
+```
+
+
 
 ## Spatial Joins
 
@@ -160,6 +219,13 @@ within_gdf = gpd.sjoin(black_point_gdf, blue_region_gdf, op = 'within')
 This means find all the black points that are within the blue regions.  Notice the order is switched.  We're still talking about the same points and regions.
 
 The resulting dataframe will have fields suffixed `_left` and `_right` including the index of the right dataframe.
+
+If only a subset of the columns are needed from the right dataframe, subset that dataframe in the join by specifying the columns.  For example to add just two columns for a country name and polygon geometry to a cities dataframe, where the country is the one that has the city point within it's polygon:
+
+```python
+joined = gpd.sjoin(cities, countries[['name', 'geometry'], op='within'])
+```
+Note that it won't work without the geometry field, otherwise the second DataFrame is just a padas DataFrame, not a geoDataFrame!
 
 ## GeoSeries Methods & Attributes
 
@@ -244,6 +310,14 @@ plt.xlabel('longitude')
 plt.ylabel('latitude')
 plt.show()
 ```
+
+It is also possible to create a coropleth with a continuous variable, by assigning a number of bins, and a quantisation scheme.  Use `quantiles` for variables with a very uneven distribution of data,  otherwise `equal_interval`.  
+
+```python
+locations.plot(column='variable', scheme='equal_interval', k=7, cmap='Purples')
+```
+
+For categoricals we can use a non-ordered color scheme, for example `Purples` .  For a graduated variable use a sequential color scheme like `RdPu`.  And for a graduated variable where there is a typical value around the median, but you would like to illistrate areas diverging from that, use a diverget scheme like `RdYlGn`
 
 Folium maps have a `chloropleth()` method that can asign a color gradient to numerical values for each polygon.  Here is an example much like above.
 ```python

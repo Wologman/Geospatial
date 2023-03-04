@@ -64,14 +64,11 @@ countries['continent'] == 'Africa'  #returns a boolean series.
 # Or to use the series as a mask and return only the countries in Africa:
 countries_africa = countries[countries['continent'] == 'Africa']
 ```
-
 The same pattern can be used for spatial queries, to efficiently filter elements based on a spatial relationship.  For example 
-
 ```python
 cities.within(france)  # This would return a boolean series for a dataframe of cities and a polygon object france.
 cities[cities.within(france)] # This would return  a gdb of cities within france
 ```
-
 Same thing, but here we're going to make it a bit clearer using a mask object on.  Asking which countries intersect with tributaries of the Amazon.  The countries and rivers are in different dataframes.
 ```python
 rivers= geopandas.read_file(my_amazon_rivers_centrelines.gpkg)
@@ -80,10 +77,10 @@ amazon = rivers[rivers['name']== 'Amazonas'].geometry.squeeze()
 mask = countries.intersects(amazon) #creating another mask
 countries[mask]
 
->>>  name   continent   geometry
->>>  Brazil  South America   POLYGON((.....))
+>>>  name       continent       geometry
+>>>  Brazil     South America   POLYGON((...))
 >>>  Columbia
->>>  Peru   etc...
+>>>  Peru       etc...
 ```
 
 #### `.groupby()`
@@ -142,7 +139,6 @@ We could turn the points into shapely point objects, and create a GeoDataFrame, 
 GeoDataFrames have a `.plot()` method that we can use for points, lines and polygons, whatever is in the .geometry attribute of the dataframe.   With no arguments at all, this will produce a basic plot with polygons in bue, white gaps between, or blue lines.   
 
 For a really simple base-map, consider improting `contextily` and using the add_basemap() method.  Here is an example of Paris restaurants, starting from a `csv` file of lat and long points in EPSG4326 (decimal degrees) .
-
 ```python
 import contextily
 import geopandas as gpd
@@ -155,6 +151,8 @@ ax = restaurants.plot(markersize=1)
 contextily.add_basemap(ax)
 plt.show()
 ```
+Note, that Contextily assumes the Web Mercator projection (EPSG3857).  The data  will often come in WGS84 - EPSG:4326, or something else entirely. So it will ened converting with the `.to_crs()` method.
+
 
 ### Plot with colors based on attribute values
 
@@ -164,7 +162,6 @@ my_gpd.plot(column = 'some interesting value')
 
 ### Adding a scatterplot
 To add scatter plots over the same plot, we simply add the scatter plot to it, as we would with `plt.scatter()`.  Here is an example with both polygons and points:
-
 ```python
 school_districts.plot(column = 'district', legend = True, cmap = 'Set2')
 plt.scatter(schools.lng, schools.lat, marker = 'p', c = 'darkgreen')
@@ -175,7 +172,6 @@ The `column` attribute tells the method what column to base the color scheem on.
 
 ### Multi-layered plot(s)
 The above principle can be extended to any number of extra layers and multiple plots elegantly with `plt.subplots` and setting the `ax` attribute of plot.  For an example of city points on a polygon map of the world:
-
 ```python
 fig, ax = plt.subplots(figsize=(12,6), nrows=1)  
 #nrows is optional, could set nrows=2 and ax[0], ax[1] for two plots
@@ -200,7 +196,6 @@ axes[1].set_title('Quantiles')
 axes[1].set_axis_off()
 plt.show()
 ```
-
 
 
 ## Spatial Joins
@@ -250,6 +245,31 @@ Useful attributes
 - `.area`
 - `.centroid`
 
+We can also return new geometries.
+
+```python
+intersection = park_boulogne.intersection(muette) #intersection of two polygons
+#To plot, convert to a geoSeries
+geopandas.GeoSeries([intersection]).plot()
+plt.show()
+
+# Or work directly with the resulting geometry (a shapely Polygon object)
+# Print proportion of district area that occupied by Park Boulogne:
+print(intersection.area / muette.area)
+```
+
+A common use of this would be to subset a spatial dataset with a simple polygon, like a circle or rectangle, to reduce the scope of the data, or present only the bits we want.  In this case, we get left with a dataframe with the same number of rowsm but empty polygons for the features that did not intersect.  In general:
+
+```python
+my_new_geoseries = my_geoseries.intersection(my_polygon)
+```
+
+### Overlays
+Intersection is the simple method for a polygon with a dataset.  But where we have two datasets, and we want to create a third with all polygons of one, intersecting with all polygond of another (for example a countries df with a land-use dataframe, might be interesting, so you end up with french-wheat, french-industrial, german-wheat, german-industrial etc...)  And keep the attributes from both datasets in the new one.  This is when to use overlays.
+
+
+
+
 ## Folium
 
 A python API, that builds interactive maps by accessing the Leaflet JavaScript library
@@ -292,7 +312,7 @@ for row in schools_in_dist1.iterrows():
 	popup = '<strong>' + row_values['name'] + '</strong>'
 	marker = folium.Marker(location = location, popup=popup)
 	marker.add_to(district1_map)
-	display(district1_map)
+display(district1_map)
 ```
 So now we can harness the awesome power of GeoPandas, and overlay the resulting spatial information on an interactive web map.  And put calcualted values into point pop-ups if need be.
 
@@ -355,6 +375,16 @@ By default folium uses Open Street Map, but there is a argument `tiles` that can
 ### Exporting Folium maps to the Web
 
 Add a a save method at the end,  `map.save(outfile='my_awesome_map.html')`  Then put the resulting javascript, html and css onto the website.  That's it!  So easy :)
+
+## Saving Geopandas Dataframes as files
+
+For this we use the GDAL `.to_file` method.  And we need to specify the driver as well as the appropriate file name.    Supports geojson, gpkg & shp (but only use .shp under duress)
+
+```python
+
+geodataframe.to_file('my_geo_file.geojson' driver='GeoJSON')
+geodataframe.to_file('my_geo_file.gpkg' driver='GPKG')
+```
 
 
 

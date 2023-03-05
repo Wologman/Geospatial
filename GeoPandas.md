@@ -29,6 +29,7 @@ from shapely.geometry import Point
 schools['geometry'] = schools.apply(lambda x: Point((x.Longitude, x.Latitude)),
 axis = 1)
 ```
+
 Now turn it into a GeoDataframe with the `GeoDataFrame()` method.
 ```python
 import geopandas as gpd
@@ -41,7 +42,6 @@ schools_geo = gpd.GeoDataFrame(schools, GeoDataFrame(schools,
 
 ### `gdp.read_file()`
 This is the easiest way to get a geodataframe.  Will read the usual vector dataformats, including .shp, .geojson, .gpkg.   Return a geoDataFrame.
-
 ```python
 trees = gpd.read_file(paris_trees.gpkg)
 ```
@@ -64,12 +64,15 @@ countries['continent'] == 'Africa'  #returns a boolean series.
 # Or to use the series as a mask and return only the countries in Africa:
 countries_africa = countries[countries['continent'] == 'Africa']
 ```
+
 The same pattern can be used for spatial queries, to efficiently filter elements based on a spatial relationship.  For example 
 ```python
 cities.within(france)  # This would return a boolean series for a dataframe of cities and a polygon object france.
 cities[cities.within(france)] # This would return  a gdb of cities within france
 ```
+
 Same thing, but here we're going to make it a bit clearer using a mask object on.  Asking which countries intersect with tributaries of the Amazon.  The countries and rivers are in different dataframes.
+
 ```python
 rivers= geopandas.read_file(my_amazon_rivers_centrelines.gpkg)
 # Contains a 'name' field, we're looking for ones called 'Amazonas' with this filter:
@@ -120,6 +123,7 @@ If the source CSV or DataFrame doesn't alread have a column for lat and long, th
 bus_stops['lat'] = [loc[0] for loc in bus_stops.Location]
 bus_stops['lng'] = [loc[1] for loc in bus_stops.Location]
 ```
+
 If the lat and longitude is burried in a more complex text string consider using a regular expression to retrieve them.
 
 To plot with matplotlib, with nice circles, a grid, one color for the face, one for the edge:
@@ -132,6 +136,7 @@ plt.title('Nashville Public Schools')
 plt.grid()
 plt.show()
 ```
+
 We could turn the points into shapely point objects, and create a GeoDataFrame, but this isn't necessary if all we want to do is visualise the relative locations of a few points compared to each other.
 
 ### `gpd.plot()` and `contextily`
@@ -168,6 +173,7 @@ plt.scatter(schools.lng, schools.lat, marker = 'p', c = 'darkgreen')
 plt.title('Nashville Schools and School Districts')
 plt.show();
 ```
+
 The `column` attribute tells the method what column to base the color scheem on.  In this case we are coloring each district a different color, and we are using a categorical color scheme, rather than a continuously variable one.
 
 ### Multi-layered plot(s)
@@ -207,10 +213,12 @@ The three operations are `within`, `contains`, `intersects`, `disjoint` Intersec
 ```python
 contains_gdf = gpd.sjoin(blue_region_gdf, black_point_gdf, op = 'contains')
 ```
+
 This means find all the blue regions that contain all the black points.
 ```python
 within_gdf = gpd.sjoin(black_point_gdf, blue_region_gdf, op = 'within')
 ```
+
 This means find all the black points that are within the blue regions.  Notice the order is switched.  We're still talking about the same points and regions.
 
 The resulting dataframe will have fields suffixed `_left` and `_right` including the index of the right dataframe.
@@ -222,7 +230,7 @@ joined = gpd.sjoin(cities, countries[['name', 'geometry'], op='within'])
 ```
 Note that it won't work without the geometry field, otherwise the second DataFrame is just a padas DataFrame, not a geoDataFrame!
 
-## GeoSeries Methods & Attributes
+## GeoSeries  Methods & Attributes
 
 Since the GeoDataFrame is made up of GeoSeries objects, we can access all the useful spatial methods like distance, area, centroid etc.   Refer to the docs for the [full list](https://geopandas.org/en/stable/docs/reference/geoseries.html)
 
@@ -233,11 +241,13 @@ school_districts['center'] = school_districts.geometry.centroid
 
 Some useful methods:
 - `.distance(anonther_shapely_object)` between the object and some other thing
--  `.fillna([value, method, inplace])`   Fills the NZ with a geometry
+-  `.fillna([value, method, inplace])`   Fills the NA with a geometry
 - `.clip(mask[, keep_geom_type])`  
 - `.rotate(angle[, origin, use_radians)`
 - `.buffer(distance[, resolution])`
-- `.intersects(other[, align])` Returns a boolean
+- `.intersects(other[, align])` Returns a boolean, also `.within()`, `.contains()`
+- `.unary_union()` Returns a single object made from the outside of the union of all the objects in the series. 
+- `dissolve()`  Returns a unary union, and agregates all the attributes (area, population etc.)
 
 Useful attributes
 - `.crs` Returns the CRS
@@ -245,7 +255,7 @@ Useful attributes
 - `.area`
 - `.centroid`
 
-We can also return new geometries.
+We can also return new geometries with `intersection`, `union`, `difference` etc. 
 
 ```python
 intersection = park_boulogne.intersection(muette) #intersection of two polygons
@@ -267,8 +277,70 @@ my_new_geoseries = my_geoseries.intersection(my_polygon)
 ### Overlays
 Intersection is the simple method for a polygon with a dataset.  But where we have two datasets, and we want to create a third with all polygons of one, intersecting with all polygond of another (for example a countries df with a land-use dataframe, might be interesting, so you end up with french-wheat, french-industrial, german-wheat, german-industrial etc...)  And keep the attributes from both datasets in the new one.  This is when to use overlays.
 
+### Using `.apply()` with a customised function
+The built in geoseries methods discussed can be applied to a single geometry, or the whole geoseries.  But if we want to apply a customised function to every object in the geoDataFrame then the efficient way to do this is with the `.apply()` method, rather than iterating through one by one with `iterrows()` or some other looping technique.
 
+Here is an example where we want to add the name of the closest national park to small scale mining sites in the Congo
 
+```python
+# Define a function that returns the closest national park
+def closest_national_park(geom, national_parks):
+	dist = national_parks.geometry.distance(geom)
+	idx = dist.idxmin()
+	closest_park = national_parks.loc[idx, 'Name']
+	return closest_park
+
+# Call the function on single_mine to check it works
+print(closest_national_park(single_mine, national_parks))
+
+# Apply the function to all mining sites
+mining_sites['closest_park'] = mining_sites.geometry.apply(closest_national_park, national_parks=national_parks)
+print(mining_sites.head())
+```
+
+## Interaction & analysis with Raster Data
+Whilst GeoPandas does not have any methods for processing raster data, we can combine with `rasterio` and `rasterstats` packages, to get raster values based on vector geometries from GeoPandas GeoDataFrames.
+
+### Rasterio basics
+```python
+src = rasterio.open('My_Interesting_DEM.tif')  #This only loads the metadata
+bands = src.count
+width = src.width
+height = src.height
+```
+
+To work with the pixel values, we read into a NumPy array with `array = src.read()`
+To plot:  
+```python
+import raterio.plot
+rasterio.plot.show(src, cmap='terrain')
+```
+
+To extract actual statisics we use rasterstats.  `.point_query()` for point values, `.zonal_stats()` for polygons.
+
+Here is an example of extracting some point data of mining sites in the Congo from a categorical raster of vegetation types, with a dictionary to convert the codes to descriptions.
+
+```python
+import rasterstats
+
+# Extract the nearest value in the raster for all mining sites
+vegetation_raster = "central_africa_vegetation_map_foraf.tif"
+mining_sites['vegetation'] = rasterstats.point_query(mining_sites.geometry, vegetation_raster, interpolate='nearest')
+
+# Replace numeric vegation types codes with description
+mining_sites['vegetation'] = mining_sites['vegetation'].replace(vegetation_types)
+
+# Make a plot indicating the vegetation type
+mining_sites.plot(column='vegetation', legend=True)
+plt.show()
+```
+
+For polygons and zonal stats the syntax is:
+```python
+mystats = rasterstats.zonal_stats(geometries, 'path/to/raster', stats=['min', 'mean', 'max'])
+```
+
+This would return a list with min, mean and max raster values within each geometry.
 
 ## Folium
 
@@ -303,7 +375,6 @@ for row in schools_in_dist1.iterrows():
 	marker.add_to(district1_map)
 	display(district1_map)
 ```
-
 To make popups, create a string_variable, representing the html and add that to the marker.
 ```python
 for row in schools_in_dist1.iterrows():
@@ -314,6 +385,7 @@ for row in schools_in_dist1.iterrows():
 	marker.add_to(district1_map)
 display(district1_map)
 ```
+
 So now we can harness the awesome power of GeoPandas, and overlay the resulting spatial information on an interactive web map.  And put calcualted values into point pop-ups if need be.
 
 ### Choropleths
@@ -332,7 +404,6 @@ plt.show()
 ```
 
 It is also possible to create a coropleth with a continuous variable, by assigning a number of bins, and a quantisation scheme.  Use `quantiles` for variables with a very uneven distribution of data,  otherwise `equal_interval`.  
-
 ```python
 locations.plot(column='variable', scheme='equal_interval', k=7, cmap='Purples')
 ```
@@ -362,6 +433,7 @@ legend_name='Schools per km squared by School District'
 folium.LayerControl().add_to(m)
 display(m)
 ```
+
 By default folium uses Open Street Map, but there is a argument `tiles` that can be set to other sources the full list below:
 
 -   OpenStreetMap
@@ -379,7 +451,6 @@ Add a a save method at the end,  `map.save(outfile='my_awesome_map.html')`  Then
 ## Saving Geopandas Dataframes as files
 
 For this we use the GDAL `.to_file` method.  And we need to specify the driver as well as the appropriate file name.    Supports geojson, gpkg & shp (but only use .shp under duress)
-
 ```python
 
 geodataframe.to_file('my_geo_file.geojson' driver='GeoJSON')
